@@ -609,8 +609,31 @@
   }
 
   /* ---------------- Sound (Web Audio) ---------------- */
-  let actx=null, muted=false;
-  function ac(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(actx&&actx.state==='suspended') actx.resume(); return actx; }
+  let actx=null, muted=false, iosUnlocked=false;
+  function ac(){
+    if(!actx){
+      try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+    }
+    if(!actx) return null;
+    if(actx.state==='suspended') actx.resume().catch(()=>{});
+    // iOS Safari requires playing a silent buffer inside a user gesture
+    // to unlock Web Audio. After this once, all subsequent sounds work.
+    if(!iosUnlocked){
+      try{
+        const buf = actx.createBuffer(1, 1, 22050);
+        const src = actx.createBufferSource();
+        src.buffer = buf; src.connect(actx.destination);
+        src.start(0);
+        iosUnlocked = true;
+      }catch(e){}
+    }
+    return actx;
+  }
+  // Safety net: any tap anywhere will also try to unlock audio (iOS).
+  function gestureUnlock(){ ac(); }
+  ['pointerdown','touchstart','mousedown','keydown'].forEach(ev =>
+    window.addEventListener(ev, gestureUnlock, { once:false, capture:true, passive:true })
+  );
   function tone(freq, dur, type, vol, slideTo) {
     if (muted) return; const c=ac(); if(!c) return;
     const o=c.createOscillator(), g=c.createGain();

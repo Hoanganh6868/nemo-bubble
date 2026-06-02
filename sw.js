@@ -1,5 +1,5 @@
 /* Nemo & Dory Bubble PWA service worker — offline app shell */
-const CACHE = 'nemo-bubble-v1';
+const CACHE = 'nemo-bubble-v2';
 const ASSETS = [
   './',
   './index.html',
